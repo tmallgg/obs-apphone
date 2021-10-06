@@ -15,12 +15,6 @@
 static class GlobalServiceImpl : public GlobalService
 {
 public:
-    void SaveConfig() override {
-        if (saveConfig_) {
-            saveConfig_();
-        }
-    }
-
     bool RunInUIThread(std::function<void()> task) override {
         if (uiThread_ == nullptr)
             return false;
@@ -72,16 +66,110 @@ public:
             auto pushwidget = createPushWidget(QJsonObject(), container_);
             layout_->addWidget(pushwidget);
             if (pushwidget->ShowEditDlg())
-                GetGlobalService().SaveConfig();
+                SaveConfig();
             else
                 delete pushwidget;
         });
         layout_->addWidget(addButton_);
 
+        // donate
         if (std::string("\xe5\xa4\x9a\xe8\xb7\xaf\xe6\x8e\xa8\xe6\xb5\x81") == obs_module_text("Title"))
-            layout_->addWidget(new QLabel(u8"本插件免费提供，请不要为此付费。\n作者：雷鸣", container_));
+        {
+            auto cr = new QWidget(container_);
+            auto innerLayout = new QGridLayout(cr);
+            innerLayout->setAlignment(Qt::AlignmentFlag::AlignLeft);
+
+            auto label = new QLabel(u8"本插件免费提供，也可以投喂作者。", cr);
+            innerLayout->addWidget(label, 0, 0, 1, 2);
+            innerLayout->setColumnStretch(0, 4);
+            auto label2 = new QLabel(u8"作者：雷鸣", cr);
+            innerLayout->addWidget(label2, 1, 0, 1, 1);
+            auto btnFeed = new QPushButton(u8"投喂", cr);
+            innerLayout->addWidget(btnFeed, 1, 1, 1, 1);
+            QObject::connect(btnFeed, &QPushButton::clicked, [this]() {
+                const char alipaypng[] = 
+                    "iVBORw0KGgoAAAANSUhEUgAAAL4AAAC+CAMAAAC8qkWvAAADAFBMVEX///8AAAAAAAAAAAAAAAAAAAA"
+                    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALI7fhAAAACXBIWXMAAAsSAAALEg"
+                    "HS3X78AAAByUlEQVR4nO3QwQ3DMAwEwaT/plOAcMTSch6U9l6BQ5Nz/nyMMcZcmS9OerfeTJ5vGOTLl"
+                    "z+Ynwj1wXpy/Z04zwzy5cs/g0/WkyqkxI5Bvnz5t/H5E1Jdvnz58vf5HJsm5cuXfxs/hUDSwZ2iwCBf"
+                    "vvzBfJJ1zbu/uUG+fPnT+d2sa3aA25xu5Mt/HPlv8tPKdDCdJf92q4CK8uXLH8mv1z8rWm/uvgWqyJc"
+                    "vfzA/jXQLpZByvKJ8+fLn8tNL6WD3FKlObpVfRL58+cP4ZLBbop5MSRfTjHz58ufy0xpS5Rm/vpv2yJ"
+                    "cv/yR+d1k9SerW8/VF+fLln8TfSQJ2iybs3+DrevnyW5G/bGvy6/EESdj0Fi9Xb5YvX/6p/DRel0vzO"
+                    "9XTXfny5c/lE3gikFOcv1YHn0e+fPkj+WnBDpMc54XqcvLly5/IJ5y0YJ3pTvIN8uXLP4nfDTm4/0n4"
+                    "vHz58ifyEye9Sr5FTUs703758uWfyk+Qev36bv2cfADyeeTLl38SP9HI8S5qvUWqy5cv/04+4aTJEtL"
+                    "wyJcv/zY+h3RTY+XLl38qv16cjnQ/wDrJr8uXL/8kPkmqQlDd/fUT+fLlT+cbY4y5Ij9rnzvpMKGpCA"
+                    "AAAABJRU5ErkJggg==";
+                const char wechatpng[] = 
+                    "iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAAEJklEQVR4nO3dwW7lKBAF0Mlo/v+XM4v"
+                    "srFz0MFVAt87Zpm2T9BUqYSh/fX9//wO/+ff0ALiXcBAJB5FwEAkHkXAQCQfRf+kHX19fe0bwWGgZP7"
+                    "dwVWblFxyPeTzIlX/c59dhmDmIhINIOIiEgygWpA/bKsG+Bz3uvFJUPqwUlVPP3VyPmzmIhINIOIiEg"
+                    "+jTgvRhauVuqow6tYC48qCpKrJwzH3/Cz/MHETCQSQcRMJB9LIg3aZw4XJ8q+7i7k9k5iASDiLhIBIO"
+                    "otsL0oe+lcqp+nTq2qmtAlcxcxAJB5FwEAkH0cuCtG+JsPC80PjOK4epLqkiuxdqzRxEwkEkHETCQfR"
+                    "pQbqtBFtZfHzYdm3hmMc2F8JmDiLhIBIOIuEg+rp8O+SfWOv1DXIzMweRcBAJB5FwEMWCtLBN5/jOfe"
+                    "/ox1bO/m97UOGv/+LvbOYgEg4i4SASDqKXfUj7WsEXvmefUjjI8Z3Ht5oa1dS1L2pqMweRcBAJB5FwE"
+                    "MWCdKX069sHOtb3fr9vkCu6NwOYOYiEg0g4iISD6OUr+77vfZ7aFtrXGH/lVmf/sGYOIuEgEg4i4SCq"
+                    "2UNa2GS+7wX3SuPRUz2iznbvN3MQCQeRcBAJB9HLU/anFh8vKTnH1z5sO2VfXq6aOYiEg0g4iISD6NM"
+                    "V0r5tkne2Qerr+Fm4s7W7J5aZg0g4iISDSDiIXjbG7zspP37uyoO2/Qo315hTzBxEwkEkHETCQfTpK/"
+                    "tt77u39SGdGsbKtXd+dvRBH1LmCAeRcBAJB1HNHtJTZ+G37Q04VSYX0hifSsJBJBxEwkH06Sv7QoULi"
+                    "CuFYV871L9gx8IPMweRcBAJB5FwELXsIV25dts65vjah1MnkcbDmGKFlErCQSQcRMJBVHPKfltfzinb"
+                    "dqee2gzQ3W7KzEEkHETCQSQcRAca43e/aE7u3Pd66rsAn9zZzEEkHETCQSQcRC+/Zf8wVaCtrJCeerH"
+                    "e96Dxncejevzj8pVoMweRcBAJB5FwEL1s+3Sqt+a2A1FjheuYY9s+cvUrMweRcBAJB5FwEL3cQ7rtjN"
+                    "Op0u/v6/P04FATS4SDSDiIhIPoZR/SPnd2pL/zfFTfkfwfZg4i4SASDiLhIIp7SE+dhS8s7gpXV0+tg"
+                    "W7rmPUrMweRcBAJB5FwEH3ah7Sw2Lmk7dPKAaFtTbDOHsQycxAJB5FwEAkH0csvNV3SprPwp9tKzqnv"
+                    "R/VxqIklwkEkHETCQXTg06FjK/tA+w6wF77f72sZNeaUPZWEg0g4iISD6LqCdMrKsaXCdlN9rf7PHvY"
+                    "3cxAJB5FwEAkH0cuC9NTZ/MLlxW2fSBorLHXLm2+ZOYiEg0g4iISD6NOC9JJWm31feSq8tu9ofOHOVq"
+                    "/sWSIcRMJBJBxE1/Uh5R5mDiLhIBIOIuEgEg4i4SD6HwwNH1Is1PfhAAAAAElFTkSuQmCC";
+                auto donateWnd = new QDialog();
+                donateWnd->setWindowTitle(u8"投喂");
+                auto aliBtn = new QPushButton(u8"支付宝", donateWnd);
+                auto aliQr = new QLabel(donateWnd);
+                auto aliQrBmp = QPixmap::fromImage(QImage::fromData(QByteArray::fromBase64(QByteArray::fromRawData(alipaypng, sizeof(alipaypng) - 1)), "png"));
+                aliQr->setPixmap(aliQrBmp);
+                auto weBtn = new QPushButton(u8"微信", donateWnd);
+                auto weQr = new QLabel(donateWnd);
+                auto weQrBmp = QPixmap::fromImage(QImage::fromData(QByteArray::fromBase64(QByteArray::fromRawData(wechatpng, sizeof(wechatpng) - 1)), "png"));
+                weQr->setPixmap(weQrBmp);
+                auto layout = new QGridLayout(donateWnd);
+                layout->addWidget(aliBtn, 0, 0);
+                layout->addWidget(weBtn, 0, 1);
+                layout->addWidget(aliQr, 1, 0, 1, 2);
+                layout->addWidget(weQr, 1, 0, 1, 2);
+                weQr->setVisible(false);
+                QObject::connect(aliBtn, &QPushButton::clicked, [aliQr, weQr]() {
+                    aliQr->setVisible(true);
+                    weQr->setVisible(false);
+                });
+                QObject::connect(weBtn, &QPushButton::clicked, [aliQr, weQr]() {
+                    aliQr->setVisible(false);
+                    weQr->setVisible(true);
+                });
+                donateWnd->setLayout(layout);
+                donateWnd->exec();
+            });
+
+            layout_->addWidget(cr);
+        }
         else
-            layout_->addWidget(new QLabel(u8"This plugin provided free of charge. \nAuthor: SoraYuki", container_));
+        {
+            auto label = new QLabel(u8"<p>This plugin provided free. <br>Author: SoraYuki (<a href=\"https://paypal.me/sorayuki0\">donate</a>) </p>", container_);
+            label->setTextFormat(Qt::RichText);
+            label->setTextInteractionFlags(Qt::TextBrowserInteraction);
+            label->setOpenExternalLinks(true);
+            layout_->addWidget(label);
+        }
+
 
         // load config
         LoadConfig();
@@ -92,12 +180,6 @@ public:
         setLayout(layout_);
 
         resize(200, 400);
-
-        s_service.saveConfig_ = [this]() {
-            s_service.RunInUIThread([this]() {
-                SaveConfig();
-            });
-        };
     }
 
     void visibleToggled(bool visible)
@@ -164,10 +246,7 @@ public:
         root["targets"] = targetlist;
         QJsonDocument jsondoc;
         jsondoc.setObject(root);
-        config_set_string(profile_config, ConfigSection, "json", jsondoc.toBinaryData().toBase64());
-
-        config_set_int(profile_config, ConfigSection, "DockLocation", (int)dockLocation_);
-        config_set_bool(profile_config, ConfigSection, "DockVisible", dockVisible_);
+        config_set_string(profile_config, ConfigSection, "json", jsondoc.toBinaryData().toBase64().constData());
 
         config_save_safe(profile_config, "tmp", "bak");
     }
@@ -228,7 +307,7 @@ bool obs_module_load()
     
     // check old version
 #ifdef _WIN32
-    {
+    if (false) {
         std::vector<wchar_t> szExePath(MAX_PATH);
         if (GetModuleFileNameW(NULL, szExePath.data(), szExePath.size()) > 0) {
             auto old_data_dir = std::filesystem::path(szExePath.data())
@@ -291,39 +370,15 @@ Fail to load obs-multi-rtmp. Please remove old versions of this plugin.
     });
 
     auto dock = new MultiOutputWidget(mainwin);
+    dock->setObjectName("obs-multi-rtmp-dock");
     auto action = (QAction*)obs_frontend_add_dock(dock);
     QObject::connect(action, &QAction::toggled, dock, &MultiOutputWidget::visibleToggled);
-
-    // begin work around obs not remember dock geometry added by obs_frontend_add_dock
-    mainwin->removeDockWidget(dock);
-    auto docklocation = config_get_int(obs_frontend_get_global_config(), ConfigSection, "DockLocation");
-    auto visible = config_get_bool(obs_frontend_get_global_config(), ConfigSection, "DockVisible");
-    if (!config_has_user_value(obs_frontend_get_global_config(), ConfigSection, "DockLocation"))
-    {
-        docklocation = Qt::DockWidgetArea::LeftDockWidgetArea;
-    }
-    if (!config_has_user_value(obs_frontend_get_global_config(), ConfigSection, "DockVisible"))
-    {
-        visible = true;
-    }
-
-    mainwin->addDockWidget((Qt::DockWidgetArea)docklocation, dock);
-    if (visible)
-    {
-        dock->setVisible(true);
-        action->setChecked(true);
-    }
-    else
-    {
-        dock->setVisible(false);
-        action->setChecked(false);
-    }
-    // end work around
 
     obs_frontend_add_event_callback(
         [](enum obs_frontend_event event, void *private_data) {
             if (event == obs_frontend_event::OBS_FRONTEND_EVENT_EXIT)
             {
+                static_cast<MultiOutputWidget*>(private_data)->SaveConfig();
                 static_cast<MultiOutputWidget*>(private_data)->StopAll();
             }
             else if (event == obs_frontend_event::OBS_FRONTEND_EVENT_PROFILE_CHANGED)
